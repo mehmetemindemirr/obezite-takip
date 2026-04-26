@@ -1,0 +1,10 @@
+
+RewriteEngine On
+
+# Statik dosyalar (css, js, resim) doğrudan sunulsun
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Her şey index.php'ye yönlendir
+RewriteRule ^ index.php [L]

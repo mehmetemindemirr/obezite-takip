@@ -1,0 +1,16 @@
+{
+  "name": "ObeziTakip",
+  "short_name": "ObeziTakip",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#4a90e2",
+  "icons": [
+    {
+      "src": "/assets/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
