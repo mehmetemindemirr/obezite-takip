@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>ObeziTakip — Akıllı Beslenme Asistanı</title>
+  <!-- Google Fonts: Türkçe karakter desteği için latin-ext subset -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap&subset=latin,latin-ext" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
+
+  <style>
+    /* ============================================================
+       1. CSS RESET & TÜRKÇE TEMEL AYARLAR
+       Türkçe karakter sorunlarının çoğu font-family ve charset
+       eksikliğinden kaynaklanır. Inter latin-ext bunu çözer.
+    ============================================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      /* Renkler */
+      --primary:      #4f46e5;
+      --primary-dark: #3730a3;
+      --primary-light:#ede9fe;
+      --success:      #059669;
+      --warning:      #d97706;
+      --danger:       #dc2626;
+      --info:         #2563eb;
+
+      --bg:           #f8fafc;
+      --surface:      #ffffff;
+      --surface-2:    #f1f5f9;
+      --border:       #e2e8f0;
+      --border-hover: #cbd5e1;
+
+      --text:         #0f172a;
+      --text-2:       #475569;
+      --text-3:       #94a3b8;
+
+      --radius-sm:    6px;
+      --radius:       10px;
+      --radius-lg:    14px;
+
+      --shadow-sm:    0 1px 2px rgba(0,0,0,.06);
+      --shadow:       0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+      --shadow-md:    0 4px 8px rgba(0,0,0,.07);
+
+      --nav-w:        220px;
+      --topbar-h:     56px;
+    }
+
+    /* Türkçe karakter için temel font ayarı */
+    html {
+      font-size: 15px;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-feature-settings: "kern" 1, "liga" 1;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      /* Türkçe özel harf ayraçları için */
+      word-break: normal;
+      overflow-wrap: break-word;
+      hyphens: auto;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    a { color: var(--primary); text-decoration: none; }
+    button { font-family: inherit; }
+    input, select, textarea { font-family: inherit; }
+
+    /* ============================================================
+       2. LAYOUT — Masaüstü: sidebar + içerik
+    ============================================================ */
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ============================================================
+       3. SIDEBAR (masaüstü sabit, mobilde gizli panel)
+    ============================================================ */
+    .sidebar {
+      width: var(--nav-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      z-index: 200;
+      transition: transform .25s ease;
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 18px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-icon { font-size: 22px; }
+    .brand-name {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--primary);
+      /* Türkçe harf taşması önlemi */
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nav-section {
+      flex: 1;
+      padding: 10px 0;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      font-size: 13.5px;
+      font-weight: 400;
+      color: var(--text-2);
+      cursor: pointer;
+      transition: all .15s;
+      border-right: 3px solid transparent;
+      /* Türkçe uzun metinlerin kırılması */
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      user-select: none;
+    }
+
+    .nav-item:hover {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      border-right-color: var(--primary);
+      font-weight: 500;
+    }
+
+    .nav-icon {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .nav-label {
+      /* Türkçe karakterler için letter-spacing sıfırlama */
+      letter-spacing: -.01em;
+    }
+
+    .nav-logout {
+      color: var(--danger) !important;
+      border-top: 1px solid var(--border);
+      margin-top: 8px;
+      padding-top: 14px;
+    }
+
+    /* ============================================================
+       4. MOBİL TOPBAR (sadece küçük ekranlarda görünür)
+    ============================================================ */
+    .topbar {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: var(--topbar-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 300;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .hamburger {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: var(--radius-sm);
+      color: var(--text-2);
+      font-size: 20px;
+      line-height: 1;
+      transition: background .15s;
+    }
+
+    .hamburger:hover { background: var(--surface-2); }
+
+    /* Mobilde sidebar arka plan örtüsü */
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.35);
+      z-index: 190;
+    }
+
+    .sidebar-overlay.open { display: block; }
+
+    /* ============================================================
+       5. ANA İÇERİK ALANI
+    ============================================================ */
+    .content {
+      flex: 1;
+      margin-left: var(--nav-w);
+      padding: 28px;
+      min-height: 100vh;
+      /* Türkçe uzun kelimeler için */
+      overflow-wrap: break-word;
+      word-break: normal;
+    }
+
+    /* ============================================================
+       6. SAYFA BAŞLIĞI
+    ============================================================ */
+    .page-header { margin-bottom: 22px; }
+
+    .page-header h2 {
+      font-size: 20px;
+      font-weight: 600;
+      /* Türkçe büyük harf dönüşümü — locale farkı için */
+      text-transform: none;
+      letter-spacing: -.02em;
+      color: var(--text);
+    }
+
+    .page-header p {
+      font-size: 13px;
+      color: var(--text-2);
+      margin-top: 3px;
+    }
+
+    /* ============================================================
+       7. SAYFA GİZLEME SİSTEMİ
+    ============================================================ */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ============================================================
+       8. STAT KARTLARI — 4 kolon → 2 → 1
+    ============================================================ */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat.purple { border-left-color: #7c3aed; }
+    .stat.blue   { border-left-color: var(--info); }
+    .stat.green  { border-left-color: var(--success); }
+    .stat.red    { border-left-color: var(--danger); }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 8px;
+      /* Türkçe uppercase için locale belirsizliğini önle */
+      font-variant: small-caps;
+      text-transform: none;
+    }
+
+    .stat-value {
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.1;
+      /* Türkçe rakam hizalaması */
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-value small {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--text-2);
+    }
+
+    .stat-sub {
+      font-size: 12px;
+      color: var(--text-2);
+      margin-top: 5px;
+    }
+
+    /* ============================================================
+       9. BADGE (ETİKET)
+    ============================================================ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-green  { background: #dcfce7; color: #166534; }
+    .badge-yellow { background: #fef9c3; color: #854d0e; }
+    .badge-red    { background: #fee2e2; color: #991b1b; }
+    .badge-blue   { background: #dbeafe; color: #1e40af; }
+
+    /* ============================================================
+       10. KART
+    ============================================================ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-3);
+      letter-spacing: .06em;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* ============================================================
+       11. GRID YARDIMCILARI
+    ============================================================ */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    /* ============================================================
+       12. PROGRESS BAR
+    ============================================================ */
+    .prog-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-2);
+      margin-bottom: 6px;
+    }
+
+    .prog-meta strong { color: var(--text); font-weight: 600; }
+
+    .prog-track {
+      height: 10px;
+      background: var(--surface-2);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+
+    .prog-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width .5s ease;
+    }
+
+    .prog-note {
+      text-align: right;
+      font-size: 11px;
+      color: var(--text-3);
+      /* Türkçe yüzde işareti boşluk sorunu */
+      white-space: nowrap;
+    }
+
+    /* ============================================================
+       13. DİYET ÖNERİ KUTUSU
+    ============================================================ */
+    .rec-box {
+      background: var(--primary-light);
+      border: 1px solid #c4b5fd;
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+
+    .rec-box p {
+      font-size: 13px;
+      line-height: 1.7;
+      color: #3730a3;
+      /* Türkçe uzun cümle kırma */
+      hyphens: auto;
+      overflow-wrap: break-word;
+    }
+
+    /* ============================================================
+       14. FORM ELEMANLARı
+    ============================================================ */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-2);
+      /* Türkçe etiket kırılmasını önle */
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .form-group input,
+    .form-group select {
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      color: var(--text);
+      background: var(--surface);
+      transition: border .15s, box-shadow .15s;
+      /* Türkçe yazı için minimum genişlik */
+      min-width: 0;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79,70,229,.12);
+    }
+
+    .form-group input:disabled {
+      background: var(--surface-2);
+      color: var(--text-3);
+      cursor: not-allowed;
+    }
+
+    /* ============================================================
+       15. BUTON
+    ============================================================ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+      /* Türkçe büyük/küçük harf dönüşümünden kaçın */
+      text-transform: none;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+
+    .btn-outline {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--text-2);
+    }
+    .btn-outline:hover { background: var(--surface-2); color: var(--text); }
+
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+    .btn-full { width: 100%; }
+
+    /* ============================================================
+       16. TABLO
+    ============================================================ */
+    .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    .tbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      min-width: 420px; /* mobilde yatay kaydırma için */
+    }
+
+    .tbl th {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-3);
+      letter-spacing: .05em;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      white-space: nowrap;
+      background: var(--surface-2);
+    }
+
+    .tbl td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .tbl tr:last-child td { border-bottom: none; }
+    .tbl tbody tr:hover td { background: var(--surface-2); }
+
+    /* ============================================================
+       17. SU BARDAKLARI
+    ============================================================ */
+    .cups {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    .cup {
+      font-size: 22px;
+      cursor: pointer;
+      transition: transform .12s;
+      user-select: none;
+    }
+
+    .cup:hover { transform: scale(1.18); }
+    .cup.empty { filter: grayscale(1) opacity(.22); }
+
+    /* ============================================================
+       18. GRAFİK KAPSAYICI
+    ============================================================ */
+    .chart-wrap {
+      position: relative;
+      height: 190px;
+    }
+
+    .chart-wrap-sm {
+      position: relative;
+      height: 130px;
+    }
+
+    /* ============================================================
+       19. ALERT
+    ============================================================ */
+    .alert {
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    .alert-warn {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      color: #92400e;
+    }
+
+    /* ============================================================
+       20. HEDEF İLERLEME SAYAÇLARI
+    ============================================================ */
+    .goal-nums {
+      display: flex;
+      justify-content: space-around;
+      text-align: center;
+      margin: 18px 0;
+    }
+
+    .goal-num-val {
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1;
+      /* Türkçe rakam hizalaması */
+      font-variant-numeric: tabular-nums;
+    }
+
+    .goal-num-lbl {
+      font-size: 12px;
+      color: var(--text-2);
+      margin-top: 4px;
+    }
+
+    /* ============================================================
+       21. MOBIL BOTTOM NAV (çok küçük ekranlar için)
+    ============================================================ */
+    .bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 6px 0 env(safe-area-inset-bottom, 6px);
+      z-index: 300;
+      box-shadow: 0 -1px 4px rgba(0,0,0,.06);
+    }
+
+    .bottom-nav-inner {
+      display: flex;
+      justify-content: space-around;
+    }
+
+    .bottom-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 10px;
+      color: var(--text-3);
+      transition: color .15s;
+      border: none;
+      background: none;
+      /* Türkçe menü metinleri kısa tutuldu */
+      white-space: nowrap;
+    }
+
+    .bottom-nav-item.active { color: var(--primary); }
+    .bottom-nav-item span:first-child { font-size: 20px; }
+
+    /* ============================================================
+       22. RESPONSIVE MEDIA QUERIES
+       Kırılma noktaları: 1024, 768, 480
+    ============================================================ */
+
+    /* --- Tablet: 769px – 1024px --- */
+    @media (max-width: 1024px) {
+      :root { --nav-w: 190px; }
+
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .content { padding: 22px; }
+    }
+
+    /* --- Mobil Geniş: 480px – 768px --- */
+    @media (max-width: 768px) {
+      /* Sidebar gizle, topbar göster */
+      .sidebar {
+        transform: translateX(-100%);
+        box-shadow: var(--shadow-md);
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .topbar { display: flex; }
+
+      /* İçerik topbar kadar aşağı it */
+      .content {
+        margin-left: 0;
+        padding: 18px 14px;
+        padding-top: calc(var(--topbar-h) + 18px);
+        /* Bottom nav için alt boşluk */
+        padding-bottom: 80px;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+
+      .stat-value { font-size: 22px; }
+
+      .grid-2 { grid-template-columns: 1fr; }
+      .grid-3 { grid-template-columns: 1fr 1fr; }
+
+      .form-row { grid-template-columns: 1fr; }
+
+      .chart-wrap { height: 160px; }
+      .chart-wrap-sm { height: 110px; }
+
+      /* Bottom nav göster */
+      .bottom-nav { display: block; }
+    }
+
+    /* --- Mobil Dar: 0 – 479px --- */
+    @media (max-width: 479px) {
+      .stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .stat { padding: 12px 13px; }
+      .stat-value { font-size: 20px; }
+      .stat-label { font-size: 10px; }
+
+      .grid-3 { grid-template-columns: 1fr; }
+
+      .content { padding: 14px 12px; padding-top: calc(var(--topbar-h) + 14px); padding-bottom: 80px; }
+
+      .card { padding: 14px; }
+
+      .page-header h2 { font-size: 17px; }
+
+      /* Tablo küçük ekran */
+      .tbl { font-size: 12px; }
+      .tbl th, .tbl td { padding: 7px 8px; }
+
+      /* Grafik yüksekliği küçükken azalt */
+      .chart-wrap { height: 140px; }
+
+      /* Hedef ilerleme sayıları */
+      .goal-num-val { font-size: 20px; }
+    }
+
+    /* --- Büyük Ekran: 1280px+ --- */
+    @media (min-width: 1280px) {
+      .content { padding: 32px 36px; }
+      .stats { gap: 18px; }
+      .chart-wrap { height: 210px; }
+    }
+
+    /* ============================================================
+       23. PRINT STILI (bonus)
+    ============================================================ */
+    @media print {
+      .sidebar, .topbar, .bottom-nav { display: none !important; }
+      .content { margin-left: 0; padding: 0; }
+      .card { break-inside: avoid; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================
+     MOBİL TOPBAR
+============================================================ -->
+<header class="topbar" id="topbar">
+  <div class="topbar-brand">
+    <span>⚖</span>
+    <span>ObeziTakip</span>
+  </div>
+  <button class="hamburger" id="hamburger" aria-label="Menüyü aç/kapat">☰</button>
+</header>
+
+<!-- Mobil sidebar arka plan örtüsü -->
+<div class="sidebar-overlay" id="overlay"></div>
+
+<!-- ============================================================
+     SIDEBAR
+============================================================ -->
+<nav class="sidebar" id="sidebar" role="navigation" aria-label="Ana menü">
+  <div class="sidebar-header">
+    <span class="brand-icon">⚖</span>
+    <span class="brand-name">ObeziTakip</span>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-item active" onclick="goPage('dashboard',this)" tabindex="0" role="button" aria-current="page">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Dashboard</span>
+    </div>
+    <div class="nav-item" onclick="goPage('saglik',this)" tabindex="0" role="button">
+      <span class="nav-icon">📈</span>
+      <span class="nav-label">Sağlık Takibi</span>
+    </div>
+    <div class="nav-item" onclick="goPage('kalori',this)" tabindex="0" role="button">
+      <span class="nav-icon">🍽</span>
+      <span class="nav-label">Kalori Takibi</span>
+    </div>
+    <div class="nav-item" onclick="goPage('su',this)" tabindex="0" role="button">
+      <span class="nav-icon">💧</span>
+      <span class="nav-label">Su Takibi</span>
+    </div>
+    <div class="nav-item" onclick="goPage('hedef',this)" tabindex="0" role="button">
+      <span class="nav-icon">🎯</span>
+      <span class="nav-label">Hedef Kilo</span>
+    </div>
+    <div class="nav-item" onclick="goPage('profil',this)" tabindex="0" role="button">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profil</span>
+    </div>
+  </div>
+
+  <div class="nav-item nav-logout" tabindex="0" role="button">
+    <span class="nav-icon">🚪</span>
+    <span class="nav-label">Çıkış Yap</span>
+  </div>
+</nav>
+
+<!-- ============================================================
+     ANA İÇERİK
+============================================================ -->
+<main class="content" id="mainContent">
+
+  <!-- ── DASHBOARD ─────────────────────────────────────────── -->
+  <section class="page active" id="page-dashboard" aria-label="Dashboard">
+
+    <div class="page-header">
+      <h2>Merhaba, Ahmet 👋</h2>
+      <p>20 Nisan 2026, Pazartesi</p>
+    </div>
+
+    <!-- Özet Kartlar -->
+    <div class="stats">
+      <div class="stat purple">
+        <div class="stat-label">VKİ (BMI)</div>
+        <div class="stat-value">27,4</div>
+        <div class="stat-sub"><span class="badge badge-yellow">Fazla Kilolu</span></div>
+      </div>
+      <div class="stat blue">
+        <div class="stat-label">Mevcut Kilo</div>
+        <div class="stat-value">84 <small>kg</small></div>
+        <div class="stat-sub">Boy: 175 cm</div>
+      </div>
+      <div class="stat green">
+        <div class="stat-label">Bugünkü Kalori</div>
+        <div class="stat-value">1.640</div>
+        <div class="stat-sub">Hedef: 2.200 kcal</div>
+      </div>
+      <div class="stat blue">
+        <div class="stat-label">Bugünkü Su</div>
+        <div class="stat-value">1.600 <small>ml</small></div>
+        <div class="stat-sub">Hedef: 2.500 ml</div>
+      </div>
+    </div>
+
+    <!-- İlerleme + Öneri -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">🎯 İlerleme Özeti</div>
+
+        <div class="prog-meta">
+          <span>Başlangıç: <strong>90 kg</strong></span>
+          <span>Şu an: <strong>84 kg</strong></span>
+          <span>Hedef: <strong>78 kg</strong></span>
+        </div>
+        <div class="prog-track">
+          <div class="prog-fill" style="width:50%;background:var(--primary)"></div>
+        </div>
+        <div class="prog-note">%50 tamamlandı — 6 kg kaldı</div>
+
+        <div style="height:18px"></div>
+        <div class="card-label">💧 Su Tüketimi</div>
+        <div class="prog-track">
+          <div class="prog-fill" style="width:64%;background:#0284c7"></div>
+        </div>
+        <div class="prog-note">1.600 / 2.500 ml — %64</div>
+
+        <div style="height:18px"></div>
+        <div class="card-label">🔥 Günlük Kalori</div>
+        <div class="prog-track">
+          <div class="prog-fill" style="width:74%;background:var(--success)"></div>
+        </div>
+        <div class="prog-note">1.640 / 2.200 kcal — %74</div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">🤖 Diyet Önerisi</div>
+        <div class="rec-box">
+          <p>
+            VKİ'niz fazla kilolu kategorisinde (27,4). Günlük kalori alımınızı
+            300–500 kcal azaltmayı hedefleyin. İşlenmiş gıdalar ve şekerli
+            içecekleri kısıtlayın. Düzenli yürüyüş (günde 30 dk) ve bol lifli
+            gıdalar tercih edin.
+          </p>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--text-3)">
+          19.04.2026 tarihli analiz &middot;
+          <span style="color:var(--primary);cursor:pointer">Yenile</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grafikler -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">📈 Kilo Değişimi (Son 30 Gün)</div>
+        <div class="chart-wrap"><canvas id="weightChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-label">🔥 Haftalık Kalori Alımı</div>
+        <div class="chart-wrap"><canvas id="calChart"></canvas></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── SAĞLIK TAKİBİ ─────────────────────────────────────── -->
+  <section class="page" id="page-saglik" aria-label="Sağlık Takibi">
+
+    <div class="page-header">
+      <h2>📈 Sağlık Takibi</h2>
+      <p>Boy, kilo ve VKİ geçmişiniz</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">Yeni Ölçüm Ekle</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="inp-weight">Kilo (kg)</label>
+            <input id="inp-weight" type="number" step="0.1" min="20" max="300" value="84" placeholder="84,0">
+          </div>
+          <div class="form-group">
+            <label for="inp-height">Boy (cm)</label>
+            <input id="inp-height" type="number" step="0.1" min="100" max="250" value="175" placeholder="175">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="inp-date">Tarih</label>
+            <input id="inp-date" type="date" value="2026-04-20">
+          </div>
+          <div class="form-group">
+            <label for="inp-note">Not (opsiyonel)</label>
+            <input id="inp-note" type="text" placeholder="Bugün egzersiz yaptım...">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addRecord()">Kaydet</button>
+      </div>
+
+      <div class="card">
+        <div class="card-label">VKİ Değişimi</div>
+        <div class="chart-wrap"><canvas id="bmiChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Ölçüm Geçmişi</div>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Tarih</th>
+              <th>Kilo</th>
+              <th>Boy</th>
+              <th>VKİ</th>
+              <th>Kategori</th>
+              <th>Not</th>
+            </tr>
+          </thead>
+          <tbody id="healthTbody">
+            <tr>
+              <td>20.04.2026</td>
+              <td><strong>84,0 kg</strong></td>
+              <td>175 cm</td>
+              <td>27,4</td>
+              <td><span class="badge badge-yellow">Fazla Kilolu</span></td>
+              <td style="color:var(--text-3);font-size:12px">—</td>
+            </tr>
+            <tr>
+              <td>13.04.2026</td>
+              <td><strong>84,8 kg</strong></td>
+              <td>175 cm</td>
+              <td>27,7</td>
+              <td><span class="badge badge-yellow">Fazla Kilolu</span></td>
+              <td style="color:var(--text-3);font-size:12px">Spor yaptım</td>
+            </tr>
+            <tr>
+              <td>06.04.2026</td>
+              <td><strong>85,5 kg</strong></td>
+              <td>175 cm</td>
+              <td>27,9</td>
+              <td><span class="badge badge-yellow">Fazla Kilolu</span></td>
+              <td style="color:var(--text-3);font-size:12px">—</td>
+            </tr>
+            <tr>
+              <td>30.03.2026</td>
+              <td><strong>86,2 kg</strong></td>
+              <td>175 cm</td>
+              <td>28,2</td>
+              <td><span class="badge badge-yellow">Fazla Kilolu</span></td>
+              <td style="color:var(--text-3);font-size:12px">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── KALORİ TAKİBİ ─────────────────────────────────────── -->
+  <section class="page" id="page-kalori" aria-label="Kalori Takibi">
+
+    <div class="page-header">
+      <h2>🍽 Kalori Takibi</h2>
+      <p>Günlük öğün ve kalori kaydınız</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">Öğün Ekle</div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label for="inp-food">Yemek Adı</label>
+          <input id="inp-food" type="text" placeholder="Izgara tavuk, mercimek çorbası...">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="inp-cal">Kalori (kcal)</label>
+            <input id="inp-cal" type="number" min="1" max="5000" placeholder="350">
+          </div>
+          <div class="form-group">
+            <label for="inp-meal">Öğün Türü</label>
+            <select id="inp-meal">
+              <option>Kahvaltı</option>
+              <option>Öğle Yemeği</option>
+              <option selected>Akşam Yemeği</option>
+              <option>Ara Öğün</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label>Fotoğraf
+            <span style="font-weight:400;color:var(--text-3)">(AI kalori tahmini)</span>
+          </label>
+          <input type="file" accept="image/*">
+        </div>
+        <button class="btn btn-primary btn-full" onclick="addMeal()">Öğün Ekle</button>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Günlük Özet — 20 Nisan 2026</div>
+        <div class="prog-meta">
+          <span>Alınan kalori</span>
+          <strong>1.640 kcal</strong>
+        </div>
+        <div class="prog-meta" style="margin-top:-4px">
+          <span>Günlük hedef</span>
+          <span>2.200 kcal</span>
+        </div>
+        <div class="prog-track" style="margin-top:8px">
+          <div class="prog-fill" style="width:74%;background:var(--success)"></div>
+        </div>
+        <div class="prog-note" style="margin-bottom:16px">%74 — 560 kcal kaldı</div>
+
+        <div class="card-label">Haftalık Kalori Alımı</div>
+        <div class="chart-wrap-sm"><canvas id="calChart2"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Bugünkü Öğünler</div>
+      <div class="tbl-wrap">
+        <table class="tbl" id="mealTable">
+          <thead>
+            <tr>
+              <th>Yemek</th>
+              <th>Öğün</th>
+              <th>Kalori</th>
+              <th>AI Analiz</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Yulaf Ezmesi</strong></td>
+              <td>Kahvaltı</td>
+              <td>280 kcal</td>
+              <td>—</td>
+              <td><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)">Sil</button></td>
+            </tr>
+            <tr>
+              <td><strong>Izgara Tavuk + Salata</strong></td>
+              <td>Öğle Yemeği</td>
+              <td>520 kcal</td>
+              <td><span class="badge badge-green">✅ Tespit edildi</span></td>
+              <td><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)">Sil</button></td>
+            </tr>
+            <tr>
+              <td><strong>Mercimek Çorbası</strong></td>
+              <td>Akşam Yemeği</td>
+              <td>180 kcal</td>
+              <td>—</td>
+              <td><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)">Sil</button></td>
+            </tr>
+            <tr>
+              <td><strong>Muz</strong></td>
+              <td>Ara Öğün</td>
+              <td>90 kcal</td>
+              <td>—</td>
+              <td><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)">Sil</button></td>
+            </tr>
+            <tr>
+              <td><strong>Pilav</strong></td>
+              <td>Akşam Yemeği</td>
+              <td>570 kcal</td>
+              <td><span class="badge badge-green">✅ Tespit edildi</span></td>
+              <td><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)">Sil</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── SU TAKİBİ ─────────────────────────────────────────── -->
+  <section class="page" id="page-su" aria-label="Su Takibi">
+
+    <div class="page-header">
+      <h2>💧 Su Takibi</h2>
+      <p>Günlük su tüketiminizi takip edin</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">Su Ekle</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="inp-water">Miktar</label>
+            <input id="inp-water" type="number" min="50" max="5000" value="250" placeholder="250">
+          </div>
+          <div class="form-group">
+            <label for="inp-unit">Birim</label>
+            <select id="inp-unit">
+              <option>ml</option>
+              <option>Litre</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Hızlı ekleme butonları -->
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px">
+          <button class="btn btn-outline btn-sm" onclick="setWater(200)">200 ml</button>
+          <button class="btn btn-outline btn-sm" onclick="setWater(250)">250 ml</button>
+          <button class="btn btn-outline btn-sm" onclick="setWater(330)">330 ml</button>
+          <button class="btn btn-outline btn-sm" onclick="setWater(500)">500 ml</button>
+        </div>
+
+        <button class="btn btn-primary btn-full" onclick="addWater()">Ekle 💧</button>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Günlük Durum — 20 Nisan 2026</div>
+        <div style="font-size:30px;font-weight:600;margin:10px 0;font-variant-numeric:tabular-nums">
+          1.600 <span style="font-size:16px;font-weight:400;color:var(--text-2)">/ 2.500 ml</span>
+        </div>
+        <div class="prog-track" style="height:14px">
+          <div class="prog-fill" style="width:64%;background:#0284c7"></div>
+        </div>
+        <div class="prog-note" style="margin-bottom:16px">%64 — 900 ml kaldı</div>
+        <div class="card-label">Bardak Takibi (200 ml / bardak)</div>
+        <div class="cups" id="cups"></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── HEDEF KİLO ─────────────────────────────────────────── -->
+  <section class="page" id="page-hedef" aria-label="Hedef Kilo">
+
+    <div class="page-header">
+      <h2>🎯 Hedef Kilo</h2>
+      <p>Kilo hedefi belirle ve ilerlemeyi takip et</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">Hedef Belirle</div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label for="inp-gstart">Başlangıç Kilosu (kg)</label>
+          <input id="inp-gstart" type="number" step="0.1" value="90">
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label for="inp-gtarget">Hedef Kilo (kg)</label>
+          <input id="inp-gtarget" type="number" step="0.1" value="78">
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label for="inp-gcurrent">Mevcut Kilo (kg)</label>
+          <input id="inp-gcurrent" type="number" step="0.1" value="84">
+        </div>
+        <button class="btn btn-primary btn-full" onclick="alert('Hedef kaydedildi!')">Kaydet</button>
+      </div>
+
+      <div class="card">
+        <div class="card-label">İlerleme Durumu</div>
+        <div class="goal-nums">
+          <div>
+            <div class="goal-num-val">90</div>
+            <div class="goal-num-lbl">Başlangıç</div>
+          </div>
+          <div>
+            <div class="goal-num-val" style="color:var(--primary);font-size:28px">84</div>
+            <div class="goal-num-lbl">Şu An</div>
+          </div>
+          <div>
+            <div class="goal-num-val" style="color:var(--success)">78</div>
+            <div class="goal-num-lbl">Hedef</div>
+          </div>
+        </div>
+
+        <div class="prog-track" style="height:16px">
+          <div class="prog-fill" style="width:50%;background:var(--primary)"></div>
+        </div>
+        <div style="text-align:center;margin-top:12px;font-size:26px;font-weight:600">%50</div>
+        <div style="text-align:center;font-size:13px;color:var(--text-2);margin-top:4px">6 kg daha gidecek 💪</div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── PROFİL ─────────────────────────────────────────────── -->
+  <section class="page" id="page-profil" aria-label="Profil">
+
+    <div class="page-header">
+      <h2>👤 Profil</h2>
+      <p>Kişisel bilgilerini güncelle</p>
+    </div>
+
+    <div class="card" style="max-width:560px">
+      <div class="card-label">Bilgileri Düzenle</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="inp-name">Ad Soyad</label>
+          <input id="inp-name" type="text" value="Ahmet Yılmaz">
+        </div>
+        <div class="form-group">
+          <label for="inp-email">E-posta</label>
+          <input id="inp-email" type="email" value="ahmet@ornek.com" disabled>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="inp-age">Yaş</label>
+          <input id="inp-age" type="number" min="5" max="120" value="22">
+        </div>
+        <div class="form-group">
+          <label for="inp-gender">Cinsiyet</label>
+          <select id="inp-gender">
+            <option selected>Erkek</option>
+            <option>Kadın</option>
+            <option>Diğer</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="inp-calgoal">Günlük Kalori Hedefi (kcal)</label>
+          <input id="inp-calgoal" type="number" min="800" max="6000" value="2200">
+        </div>
+        <div class="form-group">
+          <label for="inp-watergoal">Günlük Su Hedefi (ml)</label>
+          <input id="inp-watergoal" type="number" min="500" max="10000" value="2500">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:16px">
+        <label for="inp-pw">
+          Yeni Şifre
+          <span style="font-weight:400;color:var(--text-3)">(boş bırakırsan değişmez)</span>
+        </label>
+        <input id="inp-pw" type="password" placeholder="••••••" minlength="6">
+      </div>
+
+      <button class="btn btn-primary" onclick="alert('Profil güncellendi! ✓')">Kaydet</button>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- ============================================================
+     MOBİL BOTTOM NAV (5 ana sayfa)
+============================================================ -->
+<nav class="bottom-nav" role="navigation" aria-label="Mobil navigasyon">
+  <div class="bottom-nav-inner">
+    <button class="bottom-nav-item active" onclick="goPageMobile('dashboard',this)">
+      <span>📊</span><span>Ana Sayfa</span>
+    </button>
+    <button class="bottom-nav-item" onclick="goPageMobile('saglik',this)">
+      <span>📈</span><span>Sağlık</span>
+    </button>
+    <button class="bottom-nav-item" onclick="goPageMobile('kalori',this)">
+      <span>🍽</span><span>Kalori</span>
+    </button>
+    <button class="bottom-nav-item" onclick="goPageMobile('su',this)">
+      <span>💧</span><span>Su</span>
+    </button>
+    <button class="bottom-nav-item" onclick="goPageMobile('hedef',this)">
+      <span>🎯</span><span>Hedef</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ============================================================
+     JAVASCRIPT
+============================================================ -->
+<script>
+'use strict';
+
+/* ─── Türkçe yerel ayarı (sayı formatı için) ─── */
+const TR = 'tr-TR';
+
+/* ─── Türkçe number format yardımcısı ─── */
+function trNum(n, dec = 1) {
+  return Number(n).toLocaleString(TR, {
+    minimumFractionDigits: dec,
+    maximumFractionDigits: dec
+  });
+}
+
+/* ─── Türkçe tarih formatı ─── */
+function trDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString(TR, {
+    day: '2-digit', month: 'long', year: 'numeric'
+  });
+}
+
+/* ─── VKİ hesaplama ─── */
+function calcBMI(kg, cm) {
+  const m = cm / 100;
+  return +(kg / (m * m)).toFixed(1);
+}
+
+function bmiCategory(bmi) {
+  if (bmi < 18.5) return { label: 'Zayıf',        cls: 'badge-blue'   };
+  if (bmi < 25)   return { label: 'Normal',        cls: 'badge-green'  };
+  if (bmi < 30)   return { label: 'Fazla Kilolu',  cls: 'badge-yellow' };
+  return              { label: 'Obez',          cls: 'badge-red'    };
+}
+
+/* ─── Navigasyon ─── */
+function goPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.remove('active');
+    n.removeAttribute('aria-current');
+  });
+  document.getElementById('page-' + name).classList.add('active');
+  el.classList.add('active');
+  el.setAttribute('aria-current', 'page');
+
+  // Sidebar'ı mobilde kapat
+  closeSidebar();
+
+  // Grafikleri lazy yükle
+  if (name === 'dashboard')  { setTimeout(initDashCharts, 60); }
+  if (name === 'saglik')     { setTimeout(initBmiChart,    60); }
+  if (name === 'kalori')     { setTimeout(initCalChart2,   60); }
+}
+
+function goPageMobile(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  el.classList.add('active');
+
+  // Sidebar navigasyonu da güncelle
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  if (name === 'dashboard')  { setTimeout(initDashCharts, 60); }
+  if (name === 'saglik')     { setTimeout(initBmiChart,    60); }
+  if (name === 'kalori')     { setTimeout(initCalChart2,   60); }
+}
+
+/* ─── Hamburger / Sidebar toggle ─── */
+const hamburger = document.getElementById('hamburger');
+const sidebar   = document.getElementById('sidebar');
+const overlay   = document.getElementById('overlay');
+
+hamburger.addEventListener('click', () => {
+  const open = sidebar.classList.toggle('open');
+  overlay.classList.toggle('open', open);
+  hamburger.setAttribute('aria-expanded', String(open));
+});
+
+overlay.addEventListener('click', closeSidebar);
+
+function closeSidebar() {
+  sidebar.classList.remove('open');
+  overlay.classList.remove('open');
+  hamburger.setAttribute('aria-expanded', 'false');
+}
+
+/* Klavyeyle menü kapatma */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeSidebar();
+});
+
+/* ─── Su bardakları ─── */
+function initCups(totalMl = 1600, goalMl = 2500) {
+  const container = document.getElementById('cups');
+  if (!container) return;
+  const cupSize    = 200;
+  const totalCups  = Math.ceil(goalMl / cupSize);
+  const filledCups = Math.floor(totalMl / cupSize);
+  container.innerHTML = '';
+  for (let i = 0; i < totalCups; i++) {
+    const span = document.createElement('span');
+    span.className = 'cup ' + (i < filledCups ? 'filled' : 'empty');
+    span.textContent = '💧';
+    span.title = `${(i + 1) * cupSize} ml`;
+    container.appendChild(span);
+  }
+}
+
+/* ─── Hızlı su butonu ─── */
+function setWater(ml) {
+  document.getElementById('inp-water').value = ml;
+}
+
+function addWater() {
+  const val = document.getElementById('inp-water').value;
+  if (!val || val <= 0) { alert('Geçerli bir miktar giriniz.'); return; }
+  alert(`${val} ml su eklendi! 💧`);
+}
+
+/* ─── Sağlık kaydı ekle ─── */
+function addRecord() {
+  const kg = parseFloat(document.getElementById('inp-weight').value);
+  const cm = parseFloat(document.getElementById('inp-height').value);
+  if (!kg || !cm || kg <= 0 || cm <= 0) {
+    alert('Geçerli kilo ve boy giriniz.');
+    return;
+  }
+  const bmi = calcBMI(kg, cm);
+  const cat = bmiCategory(bmi);
+  alert(`Kayıt eklendi!\nVKİ: ${trNum(bmi)} — ${cat.label}`);
+}
+
+/* ─── Öğün ekle ─── */
+function addMeal() {
+  const food = document.getElementById('inp-food').value.trim();
+  const cal  = document.getElementById('inp-cal').value;
+  if (!food) { alert('Yemek adı giriniz.'); return; }
+  if (!cal || cal <= 0) { alert('Geçerli kalori giriniz.'); return; }
+  alert(`Öğün eklendi: ${food} — ${cal} kcal`);
+}
+
+/* ─── Chart.js Türkçe locale ayarı ─── */
+function trChartDefaults() {
+  if (!window.Chart) return;
+  Chart.defaults.font.family = "'Inter', 'Segoe UI', system-ui, sans-serif";
+  Chart.defaults.color = '#94a3b8';
+}
+
+/* ─── Dashboard grafikleri ─── */
+let _dashInit = false;
+function initDashCharts() {
+  if (_dashInit || !window.Chart) return;
+  _dashInit = true;
+  trChartDefaults();
+
+  /* Kilo grafiği */
+  const wCtx = document.getElementById('weightChart');
+  if (wCtx) {
+    new Chart(wCtx, {
+      type: 'line',
+      data: {
+        labels: ['25 Mar', '28 Mar', '01 Nis', '05 Nis', '09 Nis', '13 Nis', '17 Nis', '20 Nis'],
+        datasets: [{
+          label: 'kg',
+          data: [87.5, 86.8, 86.1, 85.5, 85.0, 84.8, 84.3, 84.0],
+          borderColor: '#4f46e5',
+          backgroundColor: 'rgba(79,70,229,.07)',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#4f46e5',
+          fill: true,
+          tension: 0.35
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          y: { grid: { color: 'rgba(0,0,0,.04)' }, ticks: { font: { size: 11 } } }
+        }
+      }
+    });
+  }
+
+  /* Kalori bar grafiği */
+  const cCtx = document.getElementById('calChart');
+  if (cCtx) {
+    new Chart(cCtx, {
+      type: 'bar',
+      data: {
+        labels: ['15', '16', '17', '18', '19', '20 Nis'],
+        datasets: [{
+          label: 'kcal',
+          data: [1820, 2100, 1950, 2300, 1780, 1640],
+          backgroundColor: 'rgba(79,70,229,.65)',
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          y: { grid: { color: 'rgba(0,0,0,.04)' }, ticks: { font: { size: 11 } } }
+        }
+      }
+    });
+  }
+}
+
+/* ─── VKİ grafiği ─── */
+let _bmiInit = false;
+function initBmiChart() {
+  if (_bmiInit || !window.Chart) return;
+  _bmiInit = true;
+  trChartDefaults();
+  const ctx = document.getElementById('bmiChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['25 Mar', '01 Nis', '09 Nis', '13 Nis', '20 Nis'],
+      datasets: [{
+        label: 'VKİ',
+        data: [28.6, 27.9, 27.7, 27.7, 27.4],
+        borderColor: '#059669',
+        backgroundColor: 'rgba(5,150,105,.07)',
+        borderWidth: 2,
+        pointRadius: 4,
+        fill: true,
+        tension: 0.35
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: {
+          min: 26,
+          grid: { color: 'rgba(0,0,0,.04)' },
+          ticks: { font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+/* ─── Kalori sayfası mini grafik ─── */
+let _cal2Init = false;
+function initCalChart2() {
+  if (_cal2Init || !window.Chart) return;
+  _cal2Init = true;
+  trChartDefaults();
+  const ctx = document.getElementById('calChart2');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['15', '16', '17', '18', '19', '20'],
+      datasets: [{
+        label: 'kcal',
+        data: [1820, 2100, 1950, 2300, 1780, 1640],
+        backgroundColor: 'rgba(5,150,105,.65)',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: 'rgba(0,0,0,.04)' }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+/* ─── Sayfa yüklenince ─── */
+document.addEventListener('DOMContentLoaded', () => {
+  initCups();
+  // Chart.js defer ile yüklendiği için kısa gecikme
+  setTimeout(initDashCharts, 200);
+});
+</script>
+</body>
+</html>
